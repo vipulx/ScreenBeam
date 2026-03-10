@@ -1,1 +1,735 @@
-<hello>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Screen Ring Light</title>
+    <!-- Modern typography from Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050505;
+            --panel-bg: rgba(20, 20, 24, 0.75);
+            --panel-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0ab;
+            --accent-color: #4facfe;
+            --accent-hover: #00f2fe;
+            --danger-color: #ff4b4b;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-color);
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-primary);
+            cursor: crosshair;
+            transition: background-color 0.3s ease;
+        }
+
+        /* 
+         * LIGHT SOURCE STYLES
+         */
+        .light-source {
+            position: absolute;
+            border-radius: 50%; /* Default circular */
+            transform: translate(-50%, -50%); /* Centered on coordinates */
+            cursor: grab;
+            transition: border-radius 0.3s ease, filter 0.3s ease;
+            /* Box-shadow adds the "glow" effect */
+        }
+        
+        .light-source:active {
+            cursor: grabbing;
+        }
+
+        /* Inner solid core representation for easier dragging if needed */
+        .light-core {
+            width: 100%;
+            height: 100%;
+            border-radius: inherit;
+            background: currentColor;
+            opacity: 0.95;
+            box-shadow: inherit; /* inherit the glow from parent */
+        }
+
+        /* Global hidden state */
+        body.lights-hidden .light-source {
+            display: none !important;
+        }
+
+        /* 
+         * CONTROL PANEL STYLES (Glassmorphism)
+         */
+        #control-panel {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            width: 340px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            z-index: 1000;
+            cursor: default;
+        }
+
+        /* Auto-hide states */
+        body.ui-hidden #control-panel {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-10px);
+        }
+        
+        /* Draggable handle for panel */
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--panel-border);
+            cursor: grab;
+        }
+        
+        .panel-header:active {
+            cursor: grabbing;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        /* 
+         * BUTTONS
+         */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--panel-border);
+            color: var(--text-primary);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        button.primary {
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            border: none;
+            color: #000;
+            font-weight: 600;
+        }
+
+        button.primary:hover {
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        button.icon-btn {
+            flex: 0 0 auto;
+            padding: 8px;
+        }
+
+        /* 
+         * LIGHT LIST ITEMS
+         */
+        #light-list {
+            max-height: calc(100vh - 250px);
+            overflow-y: auto;
+            padding-right: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Custom Scrollbar for list */
+        #light-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        #light-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+        }
+
+        .light-item {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            padding: 12px;
+            transition: border-color 0.2s;
+        }
+        
+        .light-item.active {
+            border-color: var(--accent-color);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .item-title {
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .color-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 5px currentColor;
+        }
+
+        .item-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .control-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            width: 60px;
+        }
+
+        /* 
+         * INPUTS (Sliders & Color Picker)
+         */
+        input[type="range"] {
+            -webkit-appearance: none;
+            flex: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--text-primary);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            cursor: pointer;
+            background: none;
+            padding: 0;
+        }
+        
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        input[type="color"]::-webkit-color-swatch {
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+        }
+
+        .toggle-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            flex: 1;
+        }
+        .toggle-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .delete-btn {
+            color: var(--danger-color);
+            background: transparent;
+            border: none;
+            padding: 4px;
+        }
+        .delete-btn:hover {
+            background: rgba(255, 75, 75, 0.1);
+        }
+
+        /* SVG Icons utility */
+        svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+        
+        /* Global instructions */
+        #hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            pointer-events: none;
+            transition: opacity 0.5s;
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LIGHTING CANVAS -->
+    <div id="canvas"></div>
+
+    <!-- HINT OVERLAY -->
+    <div id="hint">Drag lights to position &middot; Move mouse to reveal controls</div>
+
+    <!-- CONTROL PANEL -->
+    <div id="control-panel">
+        <div class="panel-header" id="panel-handle">
+            <h2>Ring Light Settings</h2>
+            <button class="icon-btn" id="toggle-all-btn" title="Toggle All Lights (Hide/Show)">
+                <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            </button>
+        </div>
+
+        <div class="btn-group">
+            <button class="primary" id="add-light-btn">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> Add Light
+            </button>
+            <button id="preset-btn" title="Reset to standard 3-point lighting setup">Presets</button>
+        </div>
+
+        <div id="light-list">
+            <!-- Light item controls will be injected here via JS -->
+        </div>
+    </div>
+
+
+<script>
+    /**
+     * VIRTUAL SCREEN RING LIGHT APPLICATION
+     */
+     
+    const canvas = document.getElementById('canvas');
+    const panel = document.getElementById('control-panel');
+    const panelHandle = document.getElementById('panel-handle');
+    const lightList = document.getElementById('light-list');
+    
+    // Application State
+    let lights = [];
+    let lightCounter = 0;
+    let isUiHidden = false;
+    let areLightsHidden = false;
+    let hideUiTimeout;
+    let activeLightId = null;
+
+    // --- Core Entity: Light Object ---
+    class VirtualLight {
+        constructor(x, y, color = '#ffffff', size = 400, intensity = 100) {
+            this.id = `light-${++lightCounter}`;
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            this.size = size; // diameter in pixels
+            this.intensity = intensity; // 0-100 scale (opacity/blur)
+            this.shape = 'circle'; // 'circle' or 'square'
+            this.isRgb = false;
+            
+            this.element = this.createDOMObject();
+            this.controlItem = this.createControlItem();
+            
+            this.updateStyles();
+            this.attachDragEvents();
+        }
+
+        createDOMObject() {
+            const el = document.createElement('div');
+            el.className = 'light-source';
+            el.id = this.id;
+            
+            const core = document.createElement('div');
+            core.className = 'light-core';
+            el.appendChild(core);
+            
+            canvas.appendChild(el);
+            return el;
+        }
+
+        createControlItem() {
+            const item = document.createElement('div');
+            item.className = 'light-item';
+            item.id = `control-${this.id}`;
+            
+            item.innerHTML = `
+                <div class="item-header">
+                    <div class="item-title">
+                        <span class="color-indicator" style="color: ${this.color}"></span>
+                        Light ${lightCounter}
+                    </div>
+                    <button class="delete-btn icon-btn" onclick="removeLight('${this.id}')" title="Remove Light">
+                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                </div>
+                <div class="item-controls">
+                    <!-- Brightness -->
+                    <div class="control-row">
+                        <span class="control-label">Intensity</span>
+                        <input type="range" class="intensity-slider" min="10" max="100" value="${this.intensity}">
+                    </div>
+                    <!-- Size -->
+                    <div class="control-row">
+                        <span class="control-label">Size</span>
+                        <input type="range" class="size-slider" min="100" max="1200" value="${this.size}">
+                    </div>
+                    <!-- Appearance Toolbar -->
+                    <div class="control-row" style="margin-top: 5px;">
+                        <input type="color" class="color-picker" value="${this.color}" title="Set Color">
+                        <button class="toggle-btn shape-btn" title="Toggle Shape">Shape: O</button>
+                        <button class="toggle-btn rgb-btn" title="Toggle RGB Gradient Mode">RGB</button>
+                    </div>
+                </div>
+            `;
+
+            // Event Listeners for Controls
+            item.querySelector('.intensity-slider').addEventListener('input', (e) => {
+                this.intensity = e.target.value;
+                this.updateStyles();
+            });
+            
+            item.querySelector('.size-slider').addEventListener('input', (e) => {
+                this.size = e.target.value;
+                this.updateStyles();
+            });
+
+            item.querySelector('.color-picker').addEventListener('input', (e) => {
+                this.color = e.target.value;
+                this.isRgb = false;
+                item.querySelector('.color-indicator').style.color = this.color;
+                item.querySelector('.rgb-btn').classList.remove('active');
+                this.updateStyles();
+            });
+
+            item.querySelector('.shape-btn').addEventListener('click', (e) => {
+                this.shape = this.shape === 'circle' ? 'square' : 'circle';
+                e.target.innerText = this.shape === 'circle' ? 'Shape: O' : 'Shape: []';
+                this.updateStyles();
+            });
+
+            item.querySelector('.rgb-btn').addEventListener('click', (e) => {
+                this.isRgb = !this.isRgb;
+                e.target.classList.toggle('active', this.isRgb);
+                this.updateStyles();
+            });
+
+            // Highlight in list when interacted with
+            item.addEventListener('mousedown', () => setActiveLight(this.id));
+
+            lightList.appendChild(item);
+            return item;
+        }
+
+        updateStyles() {
+            // Position and Size
+            this.element.style.left = `${this.x}px`;
+            this.element.style.top = `${this.y}px`;
+            this.element.style.width = `${this.size}px`;
+            this.element.style.height = `${this.size}px`;
+            
+            // Shape
+            this.element.style.borderRadius = this.shape === 'circle' ? '50%' : '10%';
+            
+            // Calculate opacity and blur based on intensity (0-100)
+            const opacity = this.intensity / 100;
+            // Higher intensity = larger spread. Blur radius relates to size to keep it proportional
+            const blurRadius = (this.size * 0.4) * (this.intensity / 100); 
+            const spreadRadius = (this.size * 0.1) * (this.intensity / 100);
+
+            if (this.isRgb) {
+                // Creative RGB mode
+                this.element.style.color = 'transparent'; // hide core if any
+                this.element.querySelector('.light-core').style.background = `conic-gradient(
+                    red, yellow, lime, aqua, blue, magenta, red
+                )`;
+                this.element.style.boxShadow = `
+                    0 0 ${blurRadius}px ${spreadRadius}px rgba(255,255,255,${opacity * 0.3}),
+                    inset 0 0 50px rgba(255,255,255,0.5)
+                `;
+            } else {
+                // Standard mode
+                this.element.style.color = this.color;
+                this.element.querySelector('.light-core').style.background = 'currentColor';
+                this.element.style.boxShadow = `0 0 ${blurRadius}px ${spreadRadius}px ${this.color}`;
+            }
+
+            this.element.style.opacity = opacity;
+            
+            // Sync control indicator color
+            if(!this.isRgb) {
+                 this.controlItem.querySelector('.color-indicator').style.color = this.color;
+            } else {
+                 this.controlItem.querySelector('.color-indicator').style.background = 'linear-gradient(to right, red, blue)';
+                 this.controlItem.querySelector('.color-indicator').style.color = 'transparent';
+            }
+        }
+
+        attachDragEvents() {
+            let isDragging = false;
+            let offsetX, offsetY;
+
+            const onMouseDown = (e) => {
+                // Don't drag if clicking UI elements inside (though there are none currently)
+                isDragging = true;
+                setActiveLight(this.id);
+                offsetX = e.clientX - this.x;
+                offsetY = e.clientY - this.y;
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            };
+
+            const onMouseMove = (e) => {
+                if (!isDragging) return;
+                
+                // Keep within window bounds horizontally/vertically loosely (allow half-off screen)
+                let newX = e.clientX - offsetX;
+                let newY = e.clientY - offsetY;
+                
+                this.x = newX;
+                this.y = newY;
+                this.updateStyles();
+                
+                resetHideUiTimer(); // Keep UI visible while dragging
+            };
+
+            const onMouseUp = () => {
+                isDragging = false;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+
+            this.element.addEventListener('mousedown', onMouseDown);
+            // Touch support for mobile/tablets
+            this.element.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                onMouseDown({ clientX: touch.clientX, clientY: touch.clientY });
+            }, {passive: true});
+        }
+    }
+
+
+    // --- Global App Logic ---
+
+    function init() {
+        // Setup initial event listeners
+        document.getElementById('add-light-btn').addEventListener('click', () => {
+            const centerX = window.innerWidth / 2 + (Math.random() * 100 - 50);
+            const centerY = window.innerHeight / 2 + (Math.random() * 100 - 50);
+            addLight(centerX, centerY);
+        });
+
+        document.getElementById('preset-btn').addEventListener('click', applyPreset3Point);
+        document.getElementById('toggle-all-btn').addEventListener('click', toggleAllLights);
+
+        // Auto-Fullscreen on first interaction
+        document.body.addEventListener('click', requestFullscreen, { once: true });
+
+        // Auto-hide UI logic
+        document.addEventListener('mousemove', () => {
+            showUi();
+            resetHideUiTimer();
+        });
+
+        // Panel Dragging implementation
+        setupPanelDrag();
+
+        // Start with one main light centered
+        addLight(window.innerWidth / 2, window.innerHeight / 2, '#ffffff', 500, 80);
+        
+        // Start Hide Timer immediately
+        resetHideUiTimer();
+    }
+
+    function addLight(x, y, color = '#ffffff', size = 400, intensity = 100) {
+        const light = new VirtualLight(x, y, color, size, intensity);
+        lights.push(light);
+        setActiveLight(light.id);
+        
+        // Hide hint if a light is added
+        const hint = document.getElementById('hint');
+        if(hint) hint.style.opacity = '0';
+    }
+
+    window.removeLight = function(id) {
+        const index = lights.findIndex(l => l.id === id);
+        if (index > -1) {
+            // Remove DOM elements
+            lights[index].element.remove();
+            lights[index].controlItem.remove();
+            // Remove from array
+            lights.splice(index, 1);
+        }
+    }
+
+    function setActiveLight(id) {
+        activeLightId = id;
+        document.querySelectorAll('.light-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        const activeItem = document.getElementById(`control-${id}`);
+        if(activeItem) {
+            activeItem.classList.add('active');
+            // smooth scroll into view if needed
+            activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    function applyPreset3Point() {
+        // Clear existing
+        [...lights].forEach(l => removeLight(l.id));
+        
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        
+        // Key Light (Main, large, neutral/warm) - slightly right
+        addLight(w * 0.7, h * 0.4, '#fff9f0', 700, 90);
+        // Fill Light (Secondary, softer, cooler) - left side
+        addLight(w * 0.2, h * 0.5, '#e6f0ff', 600, 50);
+        // Rim/Hair Light (Small, sharp color) - top center/left
+        addLight(w * 0.4, h * 0.1, '#ffebcd', 300, 70);
+    }
+
+    function toggleAllLights() {
+        areLightsHidden = !areLightsHidden;
+        document.body.classList.toggle('lights-hidden', areLightsHidden);
+        const iconBtnStyle = areLightsHidden ? 'rgba(255, 75, 75, 0.4)' : '';
+        document.getElementById('toggle-all-btn').style.background = iconBtnStyle;
+    }
+
+    // --- Auto-Hide UI Logic ---
+    function showUi() {
+        if (isUiHidden) {
+            document.body.classList.remove('ui-hidden');
+            document.body.style.cursor = 'crosshair';
+            isUiHidden = false;
+        }
+    }
+
+    function resetHideUiTimer() {
+        clearTimeout(hideUiTimeout);
+        // We only hide if mouse isn't over the panel to prevent annoying dropouts while tuning
+        hideUiTimeout = setTimeout(() => {
+            const isHoveringPanel = panel.matches(':hover');
+            if (!isHoveringPanel) {
+                document.body.classList.add('ui-hidden');
+                document.body.style.cursor = 'none'; // fully immersive lighting mode
+                isUiHidden = true;
+            }
+        }, 3000); // 3 seconds is a better immersive feel than 5
+    }
+
+    // Don't auto-hide while hovering panel
+    panel.addEventListener('mouseenter', () => clearTimeout(hideUiTimeout));
+    panel.addEventListener('mouseleave', resetHideUiTimer);
+
+
+    // --- Panel Dragging Logic ---
+    function setupPanelDrag() {
+        let isDraggingPanel = false;
+        let pOffsetX, pOffsetY;
+
+        panelHandle.addEventListener('mousedown', (e) => {
+            if(e.target.tagName.toLowerCase() === 'button' || e.target.closest('button')) return; // let buttons work
+            isDraggingPanel = true;
+            
+            const rect = panel.getBoundingClientRect();
+            pOffsetX = e.clientX - rect.left;
+            pOffsetY = e.clientY - rect.top;
+            
+            document.addEventListener('mousemove', panelDragMove);
+            document.addEventListener('mouseup', panelDragEnd);
+        });
+
+        const panelDragMove = (e) => {
+            if (!isDraggingPanel) return;
+            
+            let newX = e.clientX - pOffsetX;
+            let newY = e.clientY - pOffsetY;
+            
+            // Constrain to window bounds
+            const maxX = window.innerWidth - panel.offsetWidth;
+            const maxY = window.innerHeight - panel.offsetHeight;
+            newX = Math.max(0, Math.min(newX, maxX));
+            newY = Math.max(0, Math.min(newY, maxY));
+            
+            // Use right/top logic or left/top logic. Converting to left/top for drag
+            panel.style.right = 'auto'; // Disable right anchoring
+            panel.style.left = `${newX}px`;
+            panel.style.top = `${newY}px`;
+        };
+
+        const panelDragEnd = () => {
+            isDraggingPanel = false;
+            document.removeEventListener('mousemove', panelDragMove);
+            document.removeEventListener('mouseup', panelDragEnd);
+        };
+    }
+
+    function requestFullscreen() {
+        const docElm = document.documentElement;
+        if (docElm.requestFullscreen) {
+            docElm.requestFullscreen().catch(() => { /* Ignore errors if user denies */ });
+        }
+    }
+
+    // Bootstrap
+    window.onload = init;
+
+</script>
+</body>
+</html>
