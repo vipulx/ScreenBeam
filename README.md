@@ -1,174 +1,66 @@
-# ScreenBeam
+<h1 align="center">
+  ScreenBeam 💡
+</h1>
 
-ScreenBeam is a lightweight web application that turns your **computer monitor into a virtual ring light** for video calls, streaming, and content creation.
+<p align="center">
+  <strong>Turn your monitor into a professional, customizable virtual ring light.</strong>
+</p>
 
-Instead of using a physical ring light, ScreenBeam allows users to create **movable light sources directly on the screen**. These lights can be positioned around the webcam area to illuminate the face and control shadows during video calls.
+<p align="center">
+  <a href="https://vipulx.github.io/ScreenBeam/">
+    <img src="https://img.shields.io/badge/Launch%20App-Try%20For%20Free-4facfe?style=for-the-badge&logoColor=white" alt="Try For Free">
+  </a>
+</p>
 
-The application runs completely in the browser and requires **no installation or external hardware**.
+## Overview
 
----
+ScreenBeam is an advanced web-based lighting tool designed for remote workers, content creators, and streamers. When you don't have a physical ring light or studio setup available, ScreenBeam converts your display into a flexible, powerful digital light board.
 
-# ✨ Features
+Simply open the app, arrange customizable light shapes on your screen around your webcam window, and achieve professional 3-point lighting effects instantly.
 
-## Virtual Screen Lighting
+## Features
 
-ScreenBeam lets users create customizable light shapes that act as **digital lighting panels** on the screen.
+✨ **Professional Light Types**: Choose between standard diffused panels or true hollow ring shapes (`◎`) to create authentic catchlights in your eyes.
+<br>🎨 **Full Customization**: Independently adjust the color, intensity, size, and shape (Circle, Square, Ring) of every light source.
+<br>👁️ **Visibility Toggles**: Easily hide or show individual lights without losing your configuration, perfect for testing your setup.
+<br>🎛️ **Quick Presets**: Set up an instant 3-point lighting setup (Key, Fill, Rim) with the click of a button.
+<br>📱 **Installable PWA**: Install ScreenBeam directly to your desktop or device home screen. It works 100% offline like a native app.
+<br>👻 **Immersive Mode**: The glassmorphic control UI and your cursor automatically vanish after 3 seconds of inactivity to maximize illumination.
 
-These lights can be arranged around the webcam area to improve face lighting during video calls.
+## Quick Start
 
----
+You don't need to install or download anything to get started. Just launch the live version hosted on GitHub Pages!
 
-## Movable and Resizable Lights
+### 👉 [Try ScreenBeam For Free](https://vipulx.github.io/ScreenBeam/)
 
-Each light source can be:
+### Usage Tips
+1. Drag the lights around your screen to find the most flattering angles.
+2. If using a dual-monitor setup, drag a light to the monitor nearest your face.
+3. Once your lights are placed, double-click to enter Full-Screen mode for maximum brightness.
+4. Let go of your mouse during a video call—the control panel will disappear so your screen becomes a perfect, uninterrupted light panel. 
 
-* dragged anywhere on the screen
-* resized to change lighting coverage
-* arranged to control shadows on the face
+## Local Development Setup
 
-This allows users to experiment with different lighting setups.
+If you want to clone this project and modify it yourself, the setup is incredibly simple. There are no node modules or build steps required.
 
----
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/vipulx/ScreenBeam.git
+   ```
+2. Because it includes a Service Worker for offline PWA functionality, you **must** serve it over a local web server (opening the file directly via `file:///` will block the background worker).
+3. If you have Python installed, you can simply run:
+   ```bash
+   python -m http.server 8080
+   ```
+4. Navigate to `http://localhost:8080/index.html` in your browser.
 
-## Shape Options
-
-Lights can appear in different shapes, such as:
-
-* Circle (simulating a ring light)
-* Square (panel lighting style)
-
-These shapes help mimic real-world lighting equipment.
-
----
-
-## Color and RGB Lighting
-
-Each light source supports customizable colors including:
-
-* White (standard lighting)
-* Warm tones
-* Cool tones
-* RGB colors
-* Gradient lighting effects
-
-This allows both natural lighting and creative lighting setups.
-
----
-
-## Brightness Adjustment
-
-Users can control the **brightness of each light individually**, allowing precise lighting control.
-
----
-
-## Multiple Light Sources
-
-Users can create several lights at once to simulate **studio lighting setups**, including:
-
-* Key light
-* Fill light
-* Accent lighting
+## Tech Stack
+* Vanilla HTML5 / CSS3 / JavaScript
+* DOM manipulation and Box-Shadow physics for light generation
+* Service Worker & Manifest JSON for PWA offline capabilities
+* Glassmorphism & Modern Google Fonts (`Outfit`)
 
 ---
-
-## Floating Control Panel
-
-ScreenBeam includes a **draggable floating control panel** where users can manage all lights.
-
-The control panel:
-
-* can be moved anywhere on the screen
-* lists all created light sources
-* allows independent control of each light
-
----
-
-## Auto-Hide Interface
-
-To keep the screen clean and maximize lighting area:
-
-* the control panel automatically hides after **5 seconds of inactivity**
-* it reappears when the mouse moves again
-
----
-
-## Fullscreen Lighting Mode
-
-When the application loads, it attempts to **enter fullscreen mode automatically** so the monitor can provide maximum lighting brightness.
-
----
-
-## Custom Cursor
-
-ScreenBeam uses a custom cursor style to create a more immersive lighting control experience.
-
----
-
-# 💡 Use Cases
-
-ScreenBeam is useful for:
-
-### Video Meetings
-
-Improve lighting for:
-
-* Zoom
-* Google Meet
-* Microsoft Teams
-* online interviews
-
----
-
-### Streaming
-
-Add lighting effects for:
-
-* YouTube
-* Twitch
-* live streaming setups
-
----
-
-### Content Creation
-
-Creators can experiment with lighting without needing professional equipment.
-
----
-
-### Portable Lighting
-
-Because ScreenBeam runs in a browser, it works on **any computer with a screen**, making it useful when traveling or working remotely.
-
----
-
-# 🚀 How to Use
-
-1. Open ScreenBeam in your browser.
-2. Add one or more light sources.
-3. Move the lights around the screen.
-4. Adjust color, brightness, and size.
-5. Position lights around your webcam to improve face illumination.
-
----
-
-# 🛠 Built With
-
-* HTML
-* CSS
-* JavaScript
-
-The project is fully client-side and does not require any backend services.
-
----
-
-# 📌 Vision
-
-ScreenBeam aims to provide a **simple and accessible alternative to physical ring lights** by using the monitor itself as a lighting source.
-
-The project demonstrates how software can transform everyday devices into creative tools for productivity and content creation.
-
----
-
-# 📄 License
-
-This project is open-source and free to use.
+<p align="center">
+  Made with ❤️ for better video calls.
+</p>
