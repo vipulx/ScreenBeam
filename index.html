@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Virtual Screen Ring Light</title>
+    <title>Virtual Screen Ring Light Pro</title>
+    
+    <!-- PWA Installation -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#050505">
+    <link rel="apple-touch-icon" href='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNGZhY2ZlIiBzdHJva2Utd2lkdGg9IjE1Ii8+PC9zdmc+'>
+    
     <!-- Modern typography from Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -53,9 +59,21 @@
             opacity: 0.95;
             box-shadow: inherit; /* inherit the glow from parent */
         }
+        
+        /* Hollow center for True Ring Light */
+        .light-core.is-ring {
+            /* Create a hollow center using a radial mask */
+            -webkit-mask-image: radial-gradient(circle, transparent 60%, black 61%);
+            mask-image: radial-gradient(circle, transparent 60%, black 61%);
+        }
 
         /* Global hidden state */
         body.lights-hidden .light-source {
+            display: none !important;
+        }
+        
+        /* Individual hidden state */
+        .light-source.hidden {
             display: none !important;
         }
 
@@ -296,6 +314,20 @@
         .delete-btn:hover {
             background: rgba(255, 75, 75, 0.1);
         }
+        
+        .visibility-btn {
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            padding: 4px;
+        }
+        .visibility-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .visibility-btn.hidden-state {
+            color: rgba(255,255,255,0.3);
+        }
 
         /* SVG Icons utility */
         svg {
@@ -380,6 +412,7 @@
             this.intensity = intensity; // 0-100 scale (opacity/blur)
             this.shape = 'circle'; // 'circle' or 'square'
             this.isRgb = false;
+            this.isHidden = false;
             
             this.element = this.createDOMObject();
             this.controlItem = this.createControlItem();
@@ -412,9 +445,14 @@
                         <span class="color-indicator" style="color: ${this.color}"></span>
                         Light ${lightCounter}
                     </div>
-                    <button class="delete-btn icon-btn" onclick="removeLight('${this.id}')" title="Remove Light">
-                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                    </button>
+                    <div style="display:flex; gap: 4px;">
+                        <button class="visibility-btn icon-btn" onclick="toggleLightVisibility('${this.id}')" title="Hide/Show Light">
+                            <svg class="eye-open" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                        </button>
+                        <button class="delete-btn icon-btn" onclick="removeLight('${this.id}')" title="Remove Light">
+                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="item-controls">
                     <!-- Brightness -->
@@ -456,8 +494,16 @@
             });
 
             item.querySelector('.shape-btn').addEventListener('click', (e) => {
-                this.shape = this.shape === 'circle' ? 'square' : 'circle';
-                e.target.innerText = this.shape === 'circle' ? 'Shape: O' : 'Shape: []';
+                // Cycle: circle -> square -> ring
+                if(this.shape === 'circle') this.shape = 'square';
+                else if(this.shape === 'square') this.shape = 'ring';
+                else this.shape = 'circle';
+                
+                let label = "Shape: O";
+                if(this.shape === 'square') label = "Shape: []";
+                if(this.shape === 'ring') label = "Shape: ◎";
+                
+                e.target.innerText = label;
                 this.updateStyles();
             });
 
@@ -482,7 +528,15 @@
             this.element.style.height = `${this.size}px`;
             
             // Shape
-            this.element.style.borderRadius = this.shape === 'circle' ? '50%' : '10%';
+            this.element.style.borderRadius = this.shape === 'square' ? '10%' : '50%';
+            
+            // Ring hollow effect
+            const core = this.element.querySelector('.light-core');
+            if(this.shape === 'ring') {
+                core.classList.add('is-ring');
+            } else {
+                core.classList.remove('is-ring');
+            }
             
             // Calculate opacity and blur based on intensity (0-100)
             const opacity = this.intensity / 100;
@@ -615,6 +669,24 @@
             lights.splice(index, 1);
         }
     }
+    
+    window.toggleLightVisibility = function(id) {
+        const light = lights.find(l => l.id === id);
+        if(light) {
+            light.isHidden = !light.isHidden;
+            light.element.classList.toggle('hidden', light.isHidden);
+            
+            const btn = light.controlItem.querySelector('.visibility-btn');
+            btn.classList.toggle('hidden-state', light.isHidden);
+            
+            // Switch eye icon based on state
+            if(light.isHidden) {
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>`;
+            } else {
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
+            }
+        }
+    }
 
     function setActiveLight(id) {
         activeLightId = id;
@@ -729,6 +801,15 @@
 
     // Bootstrap
     window.onload = init;
+    
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('ServiceWorker registered'))
+                .catch(err => console.log('ServiceWorker registration failed: ', err));
+        });
+    }
 
 </script>
 </body>
